@@ -1,0 +1,1096 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Agujero de Gusano Realista</title>
+  <style>body{margin:0;overflow:hidden;background:black;}
+    #quantumPanel{
+  position:fixed;
+  top:20px;
+  left:20px;
+  width:260px;
+  padding:16px;
+  background:rgba(10,20,40,0.65);
+  backdrop-filter: blur(8px);
+  border:1px solid rgba(120,200,255,0.4);
+  box-shadow:0 0 20px rgba(100,200,255,0.3);
+  border-radius:12px;
+  font-family: 'Courier New', monospace;
+  color:#9fdcff;
+  font-size:14px;
+  pointer-events:auto;
+}
+
+#quantumPanel .title{
+  font-weight:bold;
+  letter-spacing:2px;
+  margin-bottom:8px;
+  color:#bff2ff;
+  text-align:center;
+}
+
+#quantumPanel .eq{
+  font-size:16px;
+  text-align:center;
+  margin-bottom:12px;
+  color:#6fe3ff;
+}
+
+#quantumPanel .data span:first-child{
+  color:#7abfff;
+}
+
+.info {
+  display:inline-block;
+  margin-left:6px;
+  width:16px;
+  height:16px;
+  line-height:16px;
+  text-align:center;
+  border-radius:50%;
+  background:rgba(120,200,255,0.25);
+  border:1px solid rgba(120,200,255,0.6);
+  color:#bff2ff;
+  font-size:12px;
+  cursor:default;
+  position:relative;
+}
+
+.info:hover .tooltip {
+  opacity:1;
+  transform:translateY(0);
+  pointer-events:auto;
+}
+
+.tooltip {
+  position:absolute;
+  top:auto;
+  bottom:130%;
+  left:50%;
+  transform:translateX(-50%) translateY(0);
+  background:rgba(5,10,25,0.95);
+  border:1px solid rgba(120,200,255,0.4);
+  box-shadow:0 0 12px rgba(100,200,255,0.3);
+  border-radius:8px;
+  padding:10px 12px;
+  font-size:12px;
+  width:320px;
+  color:#d0f3ff;
+  opacity:0;
+  transition:0.25s;
+  pointer-events:none;
+  z-index:50;
+  line-height:1.4;
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  margin-bottom:25px; /* ← separación vertical */
+  position:relative;  
+}
+
+#startBtn{
+  position:fixed;
+  bottom:20px;
+  right:20px;
+  padding:12px 22px;
+  font-family:'Courier New', monospace;
+  font-size:14px;
+  letter-spacing:1px;
+  color:#bff2ff;
+  background:rgba(10,20,40,0.75);
+  border:1px solid rgba(120,200,255,0.5);
+  border-radius:10px;
+  box-shadow:0 0 18px rgba(100,200,255,0.4);
+  cursor:pointer;
+  backdrop-filter: blur(6px);
+  transition:0.3s;
+  z-index:20;
+}
+
+#startBtn:hover{
+  background:rgba(20,40,80,0.85);
+  box-shadow:0 0 25px rgba(120,220,255,0.7);
+}
+
+#fxBtn{
+  position:fixed;
+  bottom:80px;           /* ⬅️ queda encima o debajo según quieras */
+  right:20px;            /* ⬅️ mismo eje horizontal */
+  padding:12px 22px;
+  font-family:'Courier New', monospace;
+  font-size:14px;
+  letter-spacing:1px;
+  color:#bff2ff;
+  background:rgba(10,20,40,0.65);
+  border:1px solid rgba(120,200,255,0.4);
+  border-radius:10px;
+  box-shadow:0 0 18px rgba(100,200,255,0.4);
+  cursor:pointer;
+  backdrop-filter: blur(6px);
+  transition:0.3s;
+  z-index:20;
+}
+
+#fxBtn:hover{
+  background:rgba(20,40,80,0.8);
+  box-shadow:0 0 22px rgba(120,220,255,0.6);
+}
+
+canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1;
+}
+
+#quantumPanel {
+  z-index: 5;
+}
+
+#startBtn {
+  z-index: 10;
+  pointer-events: auto;
+}
+
+/* 🔥 ESTILOS NUEVOS PARA LA FILA DE LA ESFERA */
+.stacked-row {
+  display: block !important; /* Rompe la fila para permitir bajar elementos */
+  margin-bottom: 25px;
+}
+
+.stacked-row .header-line {
+  display: flex;
+  align-items: center;
+  margin-bottom: 6px; /* Espacio pequeñito entre título y porcentaje */
+}
+
+.status-value {
+  display: block;
+  font-size: 13px;       /* Un poquito más pequeño */
+  letter-spacing: 1px;   /* Estilo computadora */
+  padding-left: 2px;     /* Alineación visual fina */
+  color: #7abfff;        /* Color por defecto */
+}
+
+  </style>
+</head>
+
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+  
+  <button id="startBtn">▶ Iniciar simulación</button>
+  <button id="fxBtn">🔊 Activar efectos</button>
+
+  <audio id="spaceAudio" loop playsinline preload = "auto">
+    <source src="pad_fieldchorus-dream-sound-128bpm-17432 (1).mp3" type="audio/mpeg">
+  </audio>
+
+  <audio id="thunderAudio" preload="auto">
+    <source src="thunder1.mp3" type="audio/mpeg">
+  </audio>
+
+  <div id="quantumPanel">
+  <div class="title">WORMHOLE ANALYSIS</div>
+  <div class="eq">r(x) = r₀ + a · |x|ᵖ</div>
+  <div class="data">
+
+  <div class="row">
+    <span>r₀:</span> <span id="r0v"></span>
+    <span class="info">i
+      <span class="tooltip">Radio mínimo del agujero (la garganta).</span>
+    </span>
+  </div>
+
+  <div class="row">
+    <span>a:</span> <span id="av"></span>
+    <span class="info">i
+      <span class="tooltip">Factor de expansión.</span>
+    </span>
+  </div>
+
+  <div class="row">
+    <span>p:</span> <span id="pv"></span>
+    <span class="info">i
+      <span class="tooltip">Exponente geométrico.</span>
+    </span>
+  </div>
+
+  <div class="row">
+    <span>rₘₐₓ:</span> <span id="rmaxv"></span>
+    <span class="info">i
+      <span class="tooltip">Radio máximo permitido.</span>
+    </span>
+  </div>
+
+  <div class="row">
+    <span>θ:</span> <span id="thetav"></span>
+    <span class="info">i
+      <span class="tooltip">Ángulo de rotación visual.</span>
+    </span>
+  </div>
+
+  <div class="row">
+    <span>Ψ:</span> <span>Vacuum Flux</span>
+    <span class="info">i
+      <span class="tooltip">
+      Las partículas que estas observando, no representan materia clásica. Son una visualización de las excitaciones del vacío cuántico y del campo exótico que es polarizado y canalizado por la geometría extrema del agujero de gusano.
+
+      Físicamente pueden interpretarse como fluctuaciones del vacío, energía de punto cero y paquetes discretizados del campo de presión negativa necesarios para mantener estable la garganta del agujero.
+
+      En términos relativistas, actúan como trazadores del flujo de curvatura del espacio-tiempo, permitiendo observar cómo la geometría se organiza, rota y converge hacia el núcleo del túnel.
+      </span>
+    </span>
+  </div>
+
+  <div class="row stacked-row">
+  
+  <div class="header-line">
+    <span>Esfera Central:</span>
+    <span class="info">i
+      <span class="tooltip">
+        <b>NÚCLEO DE MATERIA EXÓTICA</b><br><br>
+        Esta esfera central es una concentración de energía negativa esencial para mantener abierta la garganta del agujero.<br><br>
+        ⚠️ <b>ADVERTENCIA:</b><br>
+        Acercarse a r < 1.5 provocará desintegración molecular inmediata (espaguetificación).
+      </span>
+    </span>
+    </div>
+
+    <span id="coreStatus" class="status-value">ANALYZING...</span>
+
+  </div>
+
+  </div>
+</div>
+
+</div>
+
+<script>
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
+camera.position.set(0,2,12);
+
+const renderer = new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth, innerHeight);
+renderer.domElement.style.touchAction = "none";
+document.body.appendChild(renderer.domElement);
+
+// 🔥 NUEVO CÓDIGO BLOOM:
+const renderScene = new THREE.RenderPass(scene, camera);
+
+// Resolución, fuerza, radio, umbral
+const bloomPass = new THREE.UnrealBloomPass(
+    new THREE.Vector2(window.innerWidth, window.innerHeight), 
+    1.5,  // Fuerza (Strength) - Juega con esto (1.0 a 3.0)
+    0.4,  // Radio (Radius)
+    0.85  // Umbral (Threshold) - Solo brilla lo que sea muy luminoso
+);
+
+const composer = new THREE.EffectComposer(renderer);
+composer.addPass(renderScene);
+composer.addPass(bloomPass);
+
+const controls = new THREE.OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.enablePan = false;
+controls.minDistance = 0;    // qué tan cerca puedes acercarte
+controls.maxDistance = 40;   // qué tan lejos puedes alejarte
+
+// Luz
+scene.add(new THREE.AmbientLight(0x224466,0.3));
+
+const light1 = new THREE.PointLight(0x66ccff,1.2);
+light1.position.set(6,4,6);
+scene.add(light1);
+
+const light2 = new THREE.PointLight(0xffaa44,0.8);
+light2.position.set(-6,-4,-6);
+scene.add(light2);
+
+// ====== Matemática y Geometría del Agujero de Gusano ======
+const profile = [];
+const r0 = 0.80; // Radio mínimo del agujero de gusano (la garganta).
+const a  = 0.03; // Factor de expansion.
+const p  = 3.35; // Exponente geométrico (Curvatura de las bocas).
+const rMax = 4.0; // Radio máximo permitido.
+
+const maxX = Math.pow((rMax - r0) / a, 1 / p);
+
+
+for(let i=0;i<=300;i++){
+  const t = (i / 300) * 2 - 1; // -1 a 1
+  const x = t * maxX;
+  const raw = r0 + a * Math.pow(Math.abs(x), p);
+  const r = Math.min(raw, rMax);
+  profile.push(new THREE.Vector2(r, x));
+}
+
+
+const geom = new THREE.LatheGeometry(profile, 100);
+geom.rotateZ(Math.PI/2);
+
+
+// Malla tipo relatividad
+const gridMat = new THREE.MeshBasicMaterial({
+  color: 0x88ccff,
+  wireframe: true,
+  transparent: true,
+  opacity: 0.85,
+  depthWrite: false,
+  depthTest: true,
+  side: THREE.FrontSide   // 🔥 clave
+});
+
+const wormhole = new THREE.Mesh(geom, gridMat);
+scene.add(wormhole);
+wormhole.renderOrder = 1;
+
+// ====== Esfera de materia exótica (base geométrica) ======
+const exoticRadius = 0.45;   // Radio de la esfera (ajustable)
+const exoticSegments = 64;   // Suavidad geométrica
+
+const exoticGeo = new THREE.SphereGeometry(
+  exoticRadius,
+  exoticSegments,
+  exoticSegments
+);
+
+// 🔥 NUEVO MATERIAL: Reacciona con distorsión y flash de luz
+const exoticMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  depthTest: true,
+  blending: THREE.AdditiveBlending,
+  uniforms: {
+    impact: { value: 0 },
+    time: { value: 0 } // Necesitamos tiempo para el ruido
+  },
+  vertexShader: `
+    uniform float impact;
+    uniform float time;
+    varying vec3 vPos;
+    varying float vIntensity;
+
+    // Función de ruido simple para la distorsión
+    float random(vec3 scale, float seed) {
+      return fract(sin(dot(gl_Position.xyz + seed, scale)) * 43758.5453 + seed);
+    }
+
+    void main() {
+      vPos = position;
+      
+      // La esfera base pulsa suavemente
+      vec3 pos = position;
+      
+      // DISTORSIÓN DE IMPACTO (Glitch Cuántico)
+      // Si hay impacto, los vértices vibran aleatoriamente
+      float noise = sin(pos.x * 10.0 + time * 20.0) * cos(pos.y * 15.0);
+      float spike = impact * 0.15 * noise; 
+      
+      // Expansión explosiva rápida
+      float expansion = 1.0 + impact * 0.3;
+
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(pos * expansion + normal * spike, 1.0);
+      
+      // Pasamos la intensidad al fragment shader para el brillo blanco
+      vIntensity = impact; 
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vPos;
+    varying float vIntensity;
+
+    void main() {
+      // Borde suave
+      float d = length(vPos) / 0.45;
+      if(d > 1.0) discard;
+      float glow = 1.0 - smoothstep(0.2, 0.95, d);
+
+      // Color base (Azul Profundo)
+      vec3 baseColor = vec3(0.05, 0.4, 1.8); 
+      
+      // Color de Impacto (Blanco/Cian brillante)
+      vec3 flashColor = vec3(2.0, 5.0, 10.0); // Valores > 1 para activar Bloom fuerte
+
+      // Mezclamos según el impacto
+      vec3 finalColor = mix(baseColor, flashColor, vIntensity * glow);
+
+      // El impacto también hace la esfera más sólida por un instante
+      float alpha = 0.6 + vIntensity * 0.4;
+
+      gl_FragColor = vec4(finalColor * glow, alpha);
+    }
+  `
+});
+
+// ===== Capa interna eléctrica =====
+const electricGeo = new THREE.SphereGeometry(0.43, 64, 64);
+
+const electricMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  depthTest: false,
+  blending: THREE.AdditiveBlending,
+  uniforms: {
+    time: { value: 0 }
+  },
+  vertexShader: `
+    varying vec3 vPos;
+    void main(){
+      vPos = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: `
+    varying vec3 vPos;
+    uniform float time;
+
+    float hash(vec3 p){
+      return fract(sin(dot(p, vec3(12.9898,78.233,45.164))) * 43758.5453);
+    }
+
+    float noise(vec3 p){
+      vec3 i = floor(p);
+      vec3 f = fract(p);
+      f = f*f*(3.0-2.0*f);
+
+      float n =
+        mix(
+          mix(
+            mix(hash(i + vec3(0,0,0)), hash(i + vec3(1,0,0)), f.x),
+            mix(hash(i + vec3(0,1,0)), hash(i + vec3(1,1,0)), f.x),
+            f.y
+          ),
+          mix(
+            mix(hash(i + vec3(0,0,1)), hash(i + vec3(1,0,1)), f.x),
+            mix(hash(i + vec3(0,1,1)), hash(i + vec3(1,1,1)), f.x),
+            f.y
+          ),
+          f.z
+        );
+
+      return n;
+    }
+
+    void main(){
+      float r = length(vPos);
+      float n = noise(vPos * 5.0 + time*0.8);
+
+      float filaments = smoothstep(0.1, 0.1, n); // más contrastado
+      float core = 1.0 - smoothstep(0.15, 0.5, r);
+
+      // Destellos tipo rayo
+      float flicker = step(0.65, sin(n * 30.0 + time * 12.0));
+
+      float intensity = filaments * core * (4.0 + flicker * 8.0);
+
+      vec3 col = vec3(0.5, 0.7, 2.0) * intensity;
+
+      gl_FragColor = vec4(col, intensity);
+    }
+  `
+});
+
+const exoticSphere = new THREE.Mesh(exoticGeo, exoticMat);
+exoticSphere.position.set(0, 0, 0);
+scene.add(exoticSphere);
+exoticSphere.renderOrder = 10;
+
+const electricField = new THREE.Mesh(electricGeo, electricMat);
+electricField.position.copy(exoticSphere.position);
+scene.add(electricField);
+electricField.renderOrder = 11;
+
+// Halo energético externo
+const haloGeo = new THREE.SphereGeometry(exoticRadius * 1.35, 64, 64);
+
+const haloMat = new THREE.ShaderMaterial({
+  depthWrite: false,
+  transparent: true,
+  depthTest: true,
+  blending: THREE.AdditiveBlending,
+  side: THREE.DoubleSide,
+  uniforms: {
+    time: { value: 0 }
+  },
+  vertexShader: `
+    varying vec3 vPos;
+    void main(){
+      vPos = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform float time;
+    varying vec3 vPos;
+
+    void main(){
+      float d = length(vPos);
+      float glow = exp(-d * 1.8);
+
+      vec3 col = vec3(0.3, 0.8, 1.0) * glow;
+
+      gl_FragColor = vec4(col, glow * 0.5);
+    }
+  `
+});
+
+const exoticHalo = new THREE.Mesh(haloGeo, haloMat);
+exoticHalo.position.copy(exoticSphere.position);
+scene.add(exoticHalo);
+exoticHalo.renderOrder = 12;
+
+// ===== Rayos eléctricos externos (curvos y temporales) =====
+const maxBolts = 15;
+const boltSegments = 12;
+
+let boltTimer = 0;
+const boltInterval = 17; // segundos
+
+const boltGroup = new THREE.Group();
+scene.add(boltGroup);
+boltGroup.renderOrder = 13;
+let impactPulse = 0;
+let impactVelocity = 0;
+
+// ===== Camera shake =====
+let ambientShake = 0;
+let cameraShake = 0;
+let cameraShakeVelocity = 0;
+
+let lastThunderTime = 0;
+let thunderUnlocked = false;
+const thunderCooldown = 600; // ms
+
+function playThunder() {
+  if (!fxEnabled || !thunderUnlocked) return;
+
+  const now = Date.now();
+  if (now - lastThunderTime < thunderCooldown) return;
+  lastThunderTime = now;
+
+  // 1. Calculamos la distancia real
+  const camDist = camera.position.distanceTo(exoticSphere.position);
+  
+  // 2. Ajustamos la distancia máxima de audición. 
+  // Antes tenías 300, pero tu cámara solo se aleja hasta 40. 
+  // Poner 60 hace que al alejarte al máximo, suene muy bajito.
+  const maxAudioDist = 60; 
+
+  if (camDist > maxAudioDist) return;
+
+  // 3. Cálculo de volumen "Brutal" (Curva cuadrática)
+  // Math.pow(..., 2) hace que el sonido caiga rápido al alejarse 
+  // y se mantenga muy potente (cercano a 1) solo si estás muy cerca.
+  let volume = 1.0 - (camDist / maxAudioDist);
+  volume = Math.pow(Math.max(0, volume), 2.5); // El 2.5 aumenta el efecto dramático
+
+  // Aseguramos que nunca sea 0 absoluto para evitar errores, pero sí muy bajo
+  thunderAudio.volume = THREE.MathUtils.clamp(volume, 0.01, 1.0);
+
+  thunderAudio.currentTime = 0;
+  thunderAudio.play();
+}
+
+function spawnLightning(){
+  boltGroup.clear();
+
+  // Menos rayos pero más detallados
+  const boltCount = 3 + Math.floor(Math.random() * 2); 
+
+  for(let b=0; b < boltCount; b++){
+    const points = [];
+
+    // Origen aleatorio en la nube exterior
+    const radius = 6 + Math.random() * 4;
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.acos(2 * Math.random() - 1);
+
+    const start = new THREE.Vector3(
+      radius * Math.sin(phi) * Math.cos(theta),
+      radius * Math.cos(phi),
+      radius * Math.sin(phi) * Math.sin(theta)
+    );
+
+    const end = new THREE.Vector3(0, 0, 0); // Destino: El agujero
+    
+    // Generación Fractal Simple (Más caos)
+    let currentPos = start.clone();
+    points.push(currentPos.clone());
+    
+    const steps = 25; // Más segmentos para más detalle
+    
+    for(let i = 1; i <= steps; i++){
+      const t = i / steps;
+      // Interpolación lineal hacia el centro
+      const target = start.clone().lerp(end, t);
+      
+      // Caos: Cuanto más cerca del centro, menos vibración (para que acierte)
+      const chaos = (1.0 - t) * 1.5; 
+      
+      // Random en 3 ejes
+      currentPos.set(
+        target.x + (Math.random() - 0.5) * chaos,
+        target.y + (Math.random() - 0.5) * chaos,
+        target.z + (Math.random() - 0.5) * chaos
+      );
+      
+      points.push(currentPos.clone());
+    }
+
+    const geo = new THREE.BufferGeometry().setFromPoints(points);
+
+    // 🔥 TRUCO PRO: Color HDR
+    // Usamos valores superiores a 1.0 (ej: 4, 10, 20)
+    // Esto hace que el Bloom cree un resplandor azul intenso
+    // mientras el centro se mantiene blanco.
+    const mat = new THREE.LineBasicMaterial({
+      color: new THREE.Color(2, 6, 10), // R:2, G:6, B:10 -> Azul Eléctrico Saturado
+      transparent: true,
+      opacity: 0.9,
+      blending: THREE.AdditiveBlending
+    });
+
+    const bolt = new THREE.Line(geo, mat);
+    bolt.userData.life = 0.3 + Math.random() * 0.2; // Vida corta y rápida
+    bolt.userData.base = geo.attributes.position.array.slice();
+    bolt.userData.phase = Math.random() * Math.PI * 2;
+    boltGroup.add(bolt);
+
+    // Flash de luz puntual en el origen del rayo
+    const light = new THREE.PointLight(0x88ccff, 5.0, 15);
+    light.position.copy(start);
+    bolt.add(light);
+    bolt.userData.light = light; // Guardamos referencia para apagarla
+
+    impactVelocity += 1.2; // Un poco más de fuerza al impacto visual
+
+    // FÍSICA DE SONIDO (La que ya tenías)
+    const dist = camera.position.distanceTo(exoticSphere.position);
+    const influenceRadius = 300.0;
+    const speedOfSoundDelay = dist * 60;
+    setTimeout(() => {
+        if(fxEnabled) {
+            playThunder();
+        }
+    }, speedOfSoundDelay);
+
+    // Camera Shake
+    if (dist < influenceRadius) {
+      const proximity = 1.0 - dist / influenceRadius;
+      const eased = Math.pow(proximity, 2.4);
+      cameraShakeVelocity += 0.15 + eased * 0.3; // Sacudida un poco más fuerte
+    }
+  }
+}
+
+
+// ===== Fondo túnel cuántico (computadora cuántica) =====
+const tunnelCount = 8000;
+const tunnelGeo = new THREE.BufferGeometry();
+const tunnelPos = new Float32Array(tunnelCount * 3);
+const tunnelSpeed = new Float32Array(tunnelCount);
+
+for(let i=0;i<tunnelCount;i++){
+  const angle = Math.random() * Math.PI * 2;
+  const radius = 10 + Math.random()*10;
+  const z = -Math.random()*80;
+
+  tunnelPos[i*3]   = Math.cos(angle) * radius;
+  tunnelPos[i*3+1] = Math.sin(angle) * radius;
+  tunnelPos[i*3+2] = z;
+
+  tunnelSpeed[i] = 0.05 + Math.random()*0.1;
+}
+
+tunnelGeo.setAttribute('position', new THREE.BufferAttribute(tunnelPos,3));
+
+const tunnelMat = new THREE.PointsMaterial({
+  color:0x00ccff,
+  size:0.06,
+  transparent:true,
+  opacity:0.85,
+  blending: THREE.AdditiveBlending,
+  depthWrite:false
+});
+
+
+const tunnel = new THREE.Points(tunnelGeo, tunnelMat);
+scene.add(tunnel);
+
+
+// ====== Partículas infinitas entrando al agujero ======
+const particleCount = 8000;
+const pGeo = new THREE.BufferGeometry();
+const positions = new Float32Array(particleCount * 3);
+const speeds = new Float32Array(particleCount);
+
+function respawnParticle(i){
+  // Distribución radial exponencial (más densidad cerca del centro)
+  const lambda = 0.02; // controla qué tan rápido cae la densidad
+  const u = Math.random();
+  const r = -Math.log(1.0 - u) / lambda;
+
+  const maxR = 80;
+  const radius = Math.min(r, maxR);
+
+  const theta = Math.random() * Math.PI * 2;
+  const phi   = Math.acos(2*Math.random() - 1);
+
+  positions[i*3]   = radius * Math.sin(phi) * Math.cos(theta);
+  positions[i*3+1] = radius * Math.cos(phi);
+  positions[i*3+2] = radius * Math.sin(phi) * Math.sin(theta);
+
+  speeds[i] = 0.01 + Math.random() * 0.02;
+}
+
+pGeo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+for(let i=0;i<particleCount;i++){
+  respawnParticle(i);
+}
+
+const pMat = new THREE.PointsMaterial({
+  color:0x88ccff,
+  size:0.09,
+  transparent:true,
+  opacity:0.8,
+  blending: THREE.AdditiveBlending
+});
+
+const particles = new THREE.Points(pGeo,pMat);
+scene.add(particles);
+
+
+// Relleno suave interno
+const fillMat = new THREE.ShaderMaterial({
+  side: THREE.FrontSide,
+  transparent: true,
+  depthWrite: false,   // 🔥 CLAVE
+  depthTest: false,    // 🔥 CLAVE
+  uniforms:{ time: { value: 0 } },
+  vertexShader: `
+    varying vec3 vPos;
+    void main(){
+      vPos = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0);
+    }`,
+  fragmentShader: `
+    varying vec3 vPos;
+    void main(){
+      float d = abs(vPos.x);
+      float core = exp(-d * 0.8);
+      float pulse = 0.6 + 0.4*sin(d*3.0 + vPos.y*2.0 + time*1.5);
+      vec3 col1 = vec3(0.1,0.4,1.0);
+      vec3 col2 = vec3(1.0,0.7,0.2);
+      vec3 col = mix(col2, col1, d/8.0) * core * pulse;
+      gl_FragColor = vec4(col, 0.25);
+    }
+  `
+});
+
+const glowMat = new THREE.ShaderMaterial({
+  side: THREE.FrontSide,
+  transparent: true,
+  blending: THREE.AdditiveBlending,
+  depthWrite: false,   // 🔥 CLAVE
+  depthTest: false,    // 🔥 CLAVE
+  uniforms:{ time: { value: 0 } },
+  vertexShader: `
+    varying vec3 vPos;
+    void main(){
+      vPos = position;
+      gl_Position = projectionMatrix * modelViewMatrix * vec4(position * 1.05,1.0);
+    }`,
+  fragmentShader: `
+    uniform float time;
+    varying vec3 vPos;
+    void main(){
+      float d = abs(vPos.x);
+      float g = exp(-d*0.6);
+      vec3 col = vec3(0.3,0.8,1.0) * g;
+      gl_FragColor = vec4(col, g*0.35);
+    }
+  `
+});
+
+const fillMesh = new THREE.Mesh(geom.clone(), fillMat);
+fillMesh.renderOrder = 2;
+scene.add(fillMesh);
+
+const glowMesh = new THREE.Mesh(geom.clone(), glowMat);
+glowMesh.renderOrder = 3;
+scene.add(glowMesh);
+
+const clock = new THREE.Clock();
+
+// Animación
+function animate(){
+  // ===== Vibración ambiental por cercanía =====
+  const dist = camera.position.distanceTo(exoticSphere.position);
+  // 🔥 NUEVO: Efecto Vértigo (Dynamic FOV)
+  // Cuanto más cerca, mayor es el ángulo de visión (FOV).
+  // Base: 60 grados. Máximo añadido: 50 grados cuando estás muy cerca.
+  const targetFOV = 60 + (300 / (dist * dist + 10)) * 3.3; 
+
+  // Suavizamos el cambio (Interpolación lineal) para que no maree
+  camera.fov = THREE.MathUtils.lerp(camera.fov, targetFOV, 0.04);
+  camera.updateProjectionMatrix(); // Obligatorio cuando cambias el FOV
+
+  const maxRadius = 40.0;
+
+  if (dist < maxRadius) {
+    const proximity = 1.0 - dist / maxRadius;
+
+  // Curva MUY suave (clave)
+  const ambient = Math.pow(proximity, 1.1) * 0.03;
+
+  ambientShake = ambient;
+  } else {
+    ambientShake = 0;
+  }
+
+  // ===== Camera shake physics =====
+  cameraShakeVelocity *= 0.92;      // amortiguación
+  cameraShake += cameraShakeVelocity;
+  cameraShake *= 0.9;
+
+  controls.update();
+
+  cameraShake = THREE.MathUtils.clamp(cameraShake, -0.15, 0.15);
+
+  // Vibración aditiva (NO rompe OrbitControls)
+  const shakeAmp = cameraShake * 1.4 + ambientShake;
+
+  camera.position.add(
+    new THREE.Vector3(
+      (Math.random() - 0.5) * shakeAmp,
+      (Math.random() - 0.5) * shakeAmp,
+      (Math.random() - 0.5) * shakeAmp
+    )
+  );
+
+  impactVelocity -= impactPulse * 1.5;   // fuerza restauradora
+  impactVelocity *= 0.65;                // amortiguación
+  impactPulse += impactVelocity;
+
+  impactPulse = THREE.MathUtils.clamp(impactPulse, 0, 1);
+
+  exoticMat.uniforms.impact.value = impactPulse;
+
+  const dt = clock.getDelta();
+  boltTimer += dt;
+
+  if(boltTimer > boltInterval){
+    boltTimer = 0;
+    spawnLightning();
+  }
+
+  const pos = pGeo.attributes.position.array;
+
+  for(let i=0;i<particleCount;i++){
+    const ix = i*3;
+    const x = pos[ix];
+    const y = pos[ix+1];
+    const z = pos[ix+2];
+
+    // Dirección hacia el centro
+  const dirX = -x;
+  const dirY = -y * 0.2;
+  const dirZ = -z;
+
+  // Vector tangencial para órbita (rotación alrededor del eje Y)
+  const orbitX = -z;
+  const orbitZ =  x;
+
+  // Mezcla de caída + órbita
+  const fallStrength  = 1.5;
+  const orbitStrength = 0;
+
+  const vx = dirX * fallStrength + orbitX * orbitStrength;
+  const vy = dirY * fallStrength;
+  const vz = dirZ * fallStrength + orbitZ * orbitStrength;
+
+  const len = Math.sqrt(vx*vx + vy*vy + vz*vz) + 0.0001;
+
+  pos[ix]   += (vx/len) * speeds[i];
+  pos[ix+1] += (vy/len) * speeds[i];
+  pos[ix+2] += (vz/len) * speeds[i];
+  
+    const dist = Math.sqrt(x*x + y*y + z*z);
+    if(dist < 0.5 || dist > 100){
+      respawnParticle(i);
+    }
+  }
+  tunnel.rotation.z += 0.002;
+  tunnelGeo.attributes.position.needsUpdate = true;
+  tunnel.material.opacity = 0.75 + Math.sin(Date.now()*0.001)*0.05;
+  pGeo.attributes.position.needsUpdate = true;
+  fillMat.uniforms.time.value += 0.01;
+  glowMat.uniforms.time.value += 0.01;
+  exoticMat.uniforms.time.value += 0.05;
+  requestAnimationFrame(animate);
+  composer.render();
+  electricMat.uniforms.time.value += 0.015;
+  document.getElementById("r0v").textContent = (r0 + (Math.random()-0.5)*0.02).toFixed(3);
+  document.getElementById("av").textContent = (a + (Math.random()-0.5)*0.005).toFixed(4);
+  document.getElementById("pv").textContent = (p + (Math.random()-0.5)*0.05).toFixed(3);
+  document.getElementById("rmaxv").textContent = rMax.toFixed(2); // Este puede quedar fijo
+  document.getElementById("thetav").textContent = wormhole.rotation.y.toFixed(2);
+  // Dentro de animate(), al final con los otros textos:
+
+  // Simula que la estabilidad del núcleo fluctúa entre 98% y 99%
+  const stability = 99.0 + (Math.random() - 0.5) * 0.8;
+  document.getElementById("coreStatus").textContent = stability.toFixed(2) + "% STABLE";
+
+  // Opcional: Si el impacto es alto (cuando caen rayos), que cambie el color o texto
+  if(impactPulse > 0.1) {
+    document.getElementById("coreStatus").style.color = "#ffaa44"; // Naranja alerta
+  } else {
+    document.getElementById("coreStatus").style.color = "#7abfff"; // Azul normal
+  }
+
+    for (let i = boltGroup.children.length - 1; i >= 0; i--) {
+      const bolt = boltGroup.children[i];
+
+      bolt.userData.life -= dt;
+
+      const light = bolt.userData.light;
+      const pos = bolt.geometry.attributes.position.array;
+      const base = bolt.userData.base;
+      const t = performance.now()*0.01 + bolt.userData.phase;
+
+      const lifeRatio = Math.max(bolt.userData.life / 0.4, 0);
+      const intensity = THREE.MathUtils.lerp(0.03, 0.18, 1 - lifeRatio);
+
+      for(let j=0;j<pos.length;j+=3){
+        const wobble = Math.sin(t + j*0.40) * intensity;
+        pos[j]   = base[j]   + wobble;
+        pos[j+1] = base[j+1] + wobble*0.6;
+        pos[j+2] = base[j+2] + wobble;
+      }
+
+      if (bolt.userData.glow) {
+        const s = 0.8 + (1 - lifeRatio) * 2.4;
+        bolt.userData.glow.scale.set(s, s, s);
+        bolt.userData.glow.material.opacity = 0.4 + (1 - lifeRatio) * 0.6;
+      }
+
+      if (light) {
+        light.intensity = lifeRatio * 1.5;
+        light.distance  = 8 + (1 - lifeRatio) * 6;
+      }   
+
+      bolt.geometry.attributes.position.needsUpdate = true;
+
+      if (bolt.userData.life <= 0) {
+        boltGroup.remove(bolt);
+      }
+    }
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = innerWidth/innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+});
+
+const audio = document.getElementById("spaceAudio");
+const thunderAudio = document.getElementById("thunderAudio");
+
+// CÓDIGO CORREGIDO
+const AudioContext = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioContext();
+
+// 1. Conectar música de fondo
+const spaceSource = audioCtx.createMediaElementSource(audio);
+spaceSource.connect(audioCtx.destination);
+
+// 2. Conectar el trueno (¡FALTABA ESTO!)
+const thunderSource = audioCtx.createMediaElementSource(thunderAudio);
+thunderSource.connect(audioCtx.destination);
+
+const startBtn = document.getElementById("startBtn");
+const fxBtn = document.getElementById("fxBtn");
+
+let playing = false;
+
+startBtn.addEventListener("click", async () => {
+
+  if (!playing) {
+    try {
+      // 🔓 DESBLOQUEO REAL DEL NAVEGADOR
+      if (audioCtx.state === "suspended") {
+        await audioCtx.resume();
+      }
+
+      audio.volume = 1;
+      await audio.play();
+
+      playing = true;
+      startBtn.textContent = "⏸ Pausar simulación";
+
+    } catch (e) {
+      console.warn("Audio bloqueado:", e);
+      alert("El navegador bloqueó el audio.");
+    }
+
+  } else {
+    audio.pause();
+    playing = false;
+    startBtn.textContent = "▶ Iniciar simulación";
+  }
+});
+
+let fxEnabled = false;
+
+fxBtn.addEventListener("click", async () => {
+  if (!fxEnabled) {
+    // === CASO 1: ENCENDER ===
+    try {
+      // Truco para desbloquear el audio
+      thunderAudio.volume = 0.1;
+      await thunderAudio.play();
+      thunderAudio.pause();
+      thunderAudio.currentTime = 0;
+      thunderAudio.volume = 1;
+
+      thunderUnlocked = true;
+      fxEnabled = true; // Aquí activamos la variable
+
+      fxBtn.textContent = "⚡ Efectos activos";
+
+      // Opcional: Hace que el primer rayo salga rápido (en 2 segundos)
+      boltTimer = boltInterval - 2; 
+
+    } catch (e) {
+      console.warn("Error audio:", e);
+    }
+  } else {
+    // === CASO 2: APAGAR (PAUSAR) ===
+    fxEnabled = false; // Aquí desactivamos
+    fxBtn.textContent = "🔊 Activar efectos";
+
+    // Limpieza inmediata
+    boltGroup.clear();    // Borra rayos visuales
+    thunderAudio.pause(); // Calla el sonido
+    thunderAudio.currentTime = 0;
+  }
+});
+
+</script>
+
+</body>
+</html>
